@@ -1,0 +1,21 @@
+# Variables de entorno
+.env
+
+# Datos PostgreSQL local
+data/
+
+# Python - entorno virtual
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# VS Code
+.vscode/
+
+# Node - dependencias frontend
+node_modules/
+
+# Archivos de sistema Windows
+Thumbs.db
+desktop.ini
