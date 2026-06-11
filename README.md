@@ -1,26 +1,28 @@
-# JobRadar 🎯
+# Meraki 🧭
 
 > **Status: Work in Progress** — actively in development.
 
-A personalized job aggregator that monitors job boards automatically, extracts the real tech stack from each offer using AI, and presents everything in a filterable catalog. Multi-user: each person defines their own search parameters and gets their own feed.
+A career intelligence tool for developers. You define your current stack and target role — Meraki analyzes the real job market, extracts patterns from hundreds of actual job postings, and gives you a clear picture of what you need to learn and how to get there.
+
+Not generic roadmaps. Real data, right now.
 
 ---
 
 ## The Problem
 
-Job searching is noisy. You open LinkedIn, Infojobs, or any job board and get flooded with offers that don't match — wrong seniority, wrong stack, wrong location. You end up reading dozens of descriptions manually just to find three relevant ones.
+Every developer knows the feeling: you want to level up or switch roles, but the advice you find is either too generic ("learn Python!") or too old ("top skills for 2024"). Nobody tells you what companies in your city are actually hiring for, at what level, and how far you are from being hireable.
 
-JobRadar does the filtering for you. Define your keywords, location, max experience, and words to exclude — the system runs searches automatically, analyzes each offer with AI, and only shows you what actually fits.
+Meraki fills that gap. It scrapes real job postings, extracts the stack they require, and maps it against your current profile — so you know exactly what to learn next.
 
 ---
 
 ## How It Works
 
-1. **You define your search parameters** — keywords, location, max years of experience, salary floor, words to exclude
-2. **The scheduler runs searches automatically** — every few hours, per user
-3. **AI extracts structured data** — tech stack, seniority level, salary, remote/on-site
-4. **Your catalog updates** — new matching offers appear, you get an email notification
-5. **You manage your pipeline** — mark offers as saved, applied, or discarded
+1. **You define your profile** — current stack, skill levels, and target role (e.g. Backend Engineer, Data Engineer)
+2. **Meraki analyzes the market** — scrapes real postings from Infojobs and extracts structured data with AI
+3. **You see the gap** — which technologies the market demands vs what you already know
+4. **You get a learning path** — curated resources (courses, certifications, docs) mapped to your exact gaps
+5. **The data stays fresh** — the scheduler runs automatically so market stats are always up to date
 
 ---
 
@@ -42,12 +44,14 @@ JobRadar does the filtering for you. Define your keywords, location, max experie
 ---
 
 ## Project Structure
-JobRadar/
+
+```
+Meraki/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/        # auth, users, searches, jobs
+│   │   ├── api/routes/        # auth, users, roles, stack, offers
 │   │   ├── core/              # config, security, database
-│   │   ├── models/            # user, search, job, job_status
+│   │   ├── models/            # user, rol, global_stack, personal_stack, offert, resource
 │   │   ├── schemas/           # Pydantic models
 │   │   ├── services/
 │   │   │   └── connectors/    # base, infojobs (extensible)
@@ -57,6 +61,7 @@ JobRadar/
 ├── frontend/
 ├── docker-compose.yml
 └── README.md
+```
 
 ---
 
@@ -76,7 +81,7 @@ docker-compose up -d
 ### Verify connection
 
 ```bash
-docker exec -it postgres_db psql -U your_user -d jobradar
+docker exec -it postgres_db psql -U your_user -d meraki
 ```
 
 ---
@@ -85,14 +90,15 @@ docker exec -it postgres_db psql -U your_user -d jobradar
 
 | Week | Focus |
 |------|-------|
-| S1 | Project structure · Docker · database models · Alembic |
-| S2 | Auth: register · login · JWT middleware |
-| S3 | Infojobs connector · multi-connector architecture · deduplication |
-| S4 | AI extraction with Gemini · job text → structured JSON |
-| S5 | Full REST API · filters · pagination · tests |
-| S6 | Scheduler · email notifications per user |
-| S7 | React frontend · catalog · filters · job status |
-| S8 | Deploy · GitHub Actions CI/CD · technical README |
+| S1 | Project structure · Docker · PostgreSQL ✅ |
+| S2 | Database models · Alembic migrations |
+| S3 | Auth: register · login · JWT middleware |
+| S4 | Infojobs connector · multi-connector architecture |
+| S5 | AI extraction with Gemini · offer text → structured JSON |
+| S6 | Market analysis engine · gap analysis · stats |
+| S7 | Learning center · resources mapped to gaps |
+| S8 | React frontend · dashboard · roadmap |
+| S9 | Deploy · GitHub Actions CI/CD · technical README |
 
 ---
 
@@ -104,7 +110,8 @@ docker exec -it postgres_db psql -U your_user -d jobradar
 - [ ] Authentication
 - [ ] Infojobs connector
 - [ ] AI extraction
-- [ ] REST API
+- [ ] Market analysis
+- [ ] Learning center
 - [ ] Frontend
 - [ ] Deploy
 
@@ -113,4 +120,4 @@ docker exec -it postgres_db psql -U your_user -d jobradar
 ## Author
 
 **Yuna Espejo** — Junior Consultant @ Timestamp Group  
-[GitHub](https://github.com/yuna-espejo)
+[yunaespejo.com](https://yunaespejo.com) · [GitHub](https://github.com/yuna-espejo)
