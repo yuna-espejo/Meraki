@@ -31,7 +31,7 @@ Meraki fills that gap. It scrapes real job postings, extracts the stack they req
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python + FastAPI |
-| Database | PostgreSQL |
+| Database | PostgreSQL 16 |
 | Job sources | Infojobs API (multi-connector architecture) |
 | AI extraction | Gemini 1.5 Flash |
 | Authentication | JWT |
@@ -43,6 +43,30 @@ Meraki fills that gap. It scrapes real job postings, extracts the stack they req
 
 ---
 
+## Database Design
+
+Meraki uses a relational PostgreSQL database with 10 tables designed around the core concept of gap analysis between a user's current stack and market demand.
+
+**Core tables:** `users`, `rol`, `global_stack`, `personal_stack`, `offer`
+
+**Junction tables (N:M relationships):** `rol_stack`, `offer_stack`, `resource_stack`
+
+Key design decisions:
+- `global_stack` stores market-wide technologies, separate from `personal_stack` which tracks each user's skills and self-assessed level
+- `offer.rol_id` references a normalized `rol` table — raw job titles are mapped to standard roles by Gemini during ingestion, enabling clean market statistics
+- Users can define multiple target roles (1:N), each mapped to the technologies the market requires
+- Migrations managed with Alembic for version-controlled schema changes
+
+```
+users ──< personal_stack >── global_stack ──< rol_stack >── rol
+                                    │                         │
+                              offer_stack ──────────────── offer
+                                    │
+                             resource_stack >── resource
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -51,7 +75,7 @@ Meraki/
 │   ├── app/
 │   │   ├── api/routes/        # auth, users, roles, stack, offers
 │   │   ├── core/              # config, security, database
-│   │   ├── models/            # user, rol, global_stack, personal_stack, offert, resource
+│   │   ├── models/            # user, rol, global_stack, personal_stack, offer, resource
 │   │   ├── schemas/           # Pydantic models
 │   │   ├── services/
 │   │   │   └── connectors/    # base, infojobs (extensible)
@@ -72,10 +96,26 @@ Meraki/
 - Python 3.11+
 - Node.js 18+
 
+### Set up environment variables
+
+Copy the example and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
 ### Run the database
 
 ```bash
 docker-compose up -d
+```
+
+### Apply migrations
+
+```bash
+cd backend
+pip install -r requirements.txt
+alembic upgrade head
 ```
 
 ### Verify connection
@@ -88,16 +128,16 @@ docker exec -it postgres_db psql -U your_user -d meraki
 
 ## Development Plan
 
-| Week | Focus |
-|------|-------|
-| S1 | Project structure · Docker · PostgreSQL ✅ |
-| S2 | Database models · Alembic migrations |
-| S3 | Auth: register · login · JWT middleware |
+| Sprint | Focus |
+|--------|-------|
+| S1 | Project structure · Docker · PostgreSQL · database models · Alembic ✅ |
+| S2 | Auth: register · login · JWT middleware |
+| S3 | User profile: current stack · target role |
 | S4 | Infojobs connector · multi-connector architecture |
 | S5 | AI extraction with Gemini · offer text → structured JSON |
 | S6 | Market analysis engine · gap analysis · stats |
 | S7 | Learning center · resources mapped to gaps |
-| S8 | React frontend · dashboard · roadmap |
+| S8 | React frontend · dashboard · roadmap · resources |
 | S9 | Deploy · GitHub Actions CI/CD · technical README |
 
 ---
@@ -106,13 +146,15 @@ docker exec -it postgres_db psql -U your_user -d meraki
 
 - [x] Project structure and Docker setup
 - [x] PostgreSQL running via Docker Compose
-- [ ] Database models and migrations
-- [ ] Authentication
+- [x] Database models designed and implemented (10 tables)
+- [x] Alembic migrations configured and applied
+- [ ] Authentication (JWT)
+- [ ] User profile and stack definition
 - [ ] Infojobs connector
-- [ ] AI extraction
-- [ ] Market analysis
+- [ ] AI extraction with Gemini
+- [ ] Market analysis engine
 - [ ] Learning center
-- [ ] Frontend
+- [ ] React frontend
 - [ ] Deploy
 
 ---
