@@ -34,7 +34,7 @@ Meraki fills that gap. It scrapes real job postings, extracts the stack they req
 | Database | PostgreSQL 16 |
 | Job sources | Infojobs API (multi-connector architecture) |
 | AI extraction | Gemini 1.5 Flash |
-| Authentication | JWT |
+| Authentication | JWT (python-jose + passlib/bcrypt) |
 | Scheduler | APScheduler |
 | Notifications | SMTP Email |
 | Frontend | React |
@@ -81,9 +81,11 @@ Meraki/
 │   │   │   └── connectors/    # base, infojobs (extensible)
 │   │   └── scheduler/         # APScheduler tasks
 │   ├── migrations/            # Alembic
+│   ├── requirements.txt
 │   └── tests/
 ├── frontend/
 ├── docker-compose.yml
+├── .env.example
 └── README.md
 ```
 
@@ -96,33 +98,68 @@ Meraki/
 - Python 3.11+
 - Node.js 18+
 
-### Set up environment variables
+### 1. Clone the repo
 
-Copy the example and fill in your values:
+```bash
+git clone https://github.com/yuna-espejo/Meraki.git
+cd Meraki
+```
+
+### 2. Set up environment variables
 
 ```bash
 cp .env.example .env
 ```
 
-### Run the database
+Fill in your values in `.env`. Required variables:
+
+```
+DATABASE_URL=postgresql://user:password@localhost:5432/meraki
+SECRET_JWT=your-secret-key
+ALG_JWT=HS256
+EXPIRE_MIN_JWT=30
+```
+
+### 3. Run the database
 
 ```bash
 docker-compose up -d
 ```
 
-### Apply migrations
+### 4. Install dependencies
 
 ```bash
 cd backend
 pip install -r requirements.txt
+```
+
+### 5. Apply migrations
+
+```bash
 alembic upgrade head
 ```
 
-### Verify connection
+### 6. Start the server
 
 ```bash
-docker exec -it postgres_db psql -U your_user -d meraki
+uvicorn app.main:app --reload
 ```
+
+### 7. Open the API docs
+
+```
+http://127.0.0.1:8000/docs
+```
+
+---
+
+## API Endpoints
+
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/register` | Register a new user |
+| POST | `/auth/login` | Login and get JWT token |
 
 ---
 
@@ -148,7 +185,9 @@ docker exec -it postgres_db psql -U your_user -d meraki
 - [x] PostgreSQL running via Docker Compose
 - [x] Database models designed and implemented (10 tables)
 - [x] Alembic migrations configured and applied
-- [ ] Authentication (JWT)
+- [x] User registration endpoint (`POST /auth/register`)
+- [ ] Login endpoint and JWT token generation
+- [ ] JWT middleware for protected routes
 - [ ] User profile and stack definition
 - [ ] Infojobs connector
 - [ ] AI extraction with Gemini
