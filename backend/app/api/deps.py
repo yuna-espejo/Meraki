@@ -16,5 +16,13 @@ def get_db():
         db.close()
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
-    payload = jwt.decode(token , os.getenv("SECRET_JWT"), algorithms=[os.getenv("ALG_JWT")])
-    email = payload.get("sub") 
+    try:
+        payload = jwt.decode(token , os.getenv("SECRET_JWT"), algorithms=[os.getenv("ALG_JWT")])
+        email = payload.get("sub") 
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Token invalido o expirado")
+    current_user = db.query(User).filter(User.email == email).first()
+    if not current_user:
+        raise HTTPException(status_code=401, detail="Usuario Incorrecto")
+    else:
+        return current_user
