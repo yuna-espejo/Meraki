@@ -32,6 +32,7 @@ Meraki fills that gap. It scrapes real job postings, extracts the stack they req
 |-------|-----------|
 | Backend | Python + FastAPI |
 | Database | PostgreSQL 16 |
+| ORM / Migrations | SQLAlchemy + Alembic |
 | Job sources | Infojobs API (multi-connector architecture) |
 | AI extraction | Gemini 1.5 Flash |
 | Authentication | JWT (python-jose + passlib/bcrypt) |
@@ -47,15 +48,9 @@ Meraki fills that gap. It scrapes real job postings, extracts the stack they req
 
 Meraki uses a relational PostgreSQL database with 10 tables designed around the core concept of gap analysis between a user's current stack and market demand.
 
-**Core tables:** `users`, `rol`, `global_stack`, `personal_stack`, `offer`
+**Core tables:** `users`, `rol`, `global_stack`, `personal_stack`, `offer`, `resource`
 
 **Junction tables (N:M relationships):** `rol_stack`, `offer_stack`, `resource_stack`
-
-Key design decisions:
-- `global_stack` stores market-wide technologies, separate from `personal_stack` which tracks each user's skills and self-assessed level
-- `offer.rol_id` references a normalized `rol` table — raw job titles are mapped to standard roles by Gemini during ingestion, enabling clean market statistics
-- Users can define multiple target roles (1:N), each mapped to the technologies the market requires
-- Migrations managed with Alembic for version-controlled schema changes
 
 ```
 users ──< personal_stack >── global_stack ──< rol_stack >── rol
@@ -63,6 +58,36 @@ users ──< personal_stack >── global_stack ──< rol_stack >── rol
                               offer_stack ──────────────── offer
                                     │
                              resource_stack >── resource
+```
+
+Key design decisions:
+- `global_stack` stores market-wide technologies, separate from `personal_stack` which tracks each user's skills and self-assessed level
+- `offer.rol_id` references a normalized `rol` table — raw job titles are mapped to standard roles by Gemini during ingestion, enabling clean market statistics
+- Users can define multiple target roles (1:N), each mapped to the technologies the market requires
+- Schema versioned and managed with Alembic migrations
+
+---
+
+## Authentication
+
+Meraki implements stateless authentication using JWT, following the standard OAuth2 password bearer flow.
+
+```
+register → password hashed (bcrypt) → stored in DB
+   ↓
+login → password verified → JWT issued (signed, expires in 30 min)
+   ↓
+protected route → middleware decodes JWT → loads user → grants access
+```
+
+- Passwords are never stored in plain text (`passlib` + `bcrypt`)
+- Tokens are signed with a secret key and validated on every protected request
+- `get_current_user` dependency (in `api/deps.py`) centralizes auth logic so any route can be protected with a single line:
+
+```python
+@router.get("/me", response_model=UserResponse)
+def get_my_profile(current_user: User = Depends(get_current_user)):
+    return current_user
 ```
 
 ---
@@ -73,7 +98,9 @@ users ──< personal_stack >── global_stack ──< rol_stack >── rol
 Meraki/
 ├── backend/
 │   ├── app/
-│   │   ├── api/routes/        # auth, users, roles, stack, offers
+│   │   ├── api/
+│   │   │   ├── routes/        # auth, users, roles, stack, offers
+│   │   │   └── deps.py        # get_db, get_current_user
 │   │   ├── core/              # config, security, database
 │   │   ├── models/            # user, rol, global_stack, personal_stack, offer, resource
 │   │   ├── schemas/           # Pydantic models
@@ -111,7 +138,7 @@ cd Meraki
 cp .env.example .env
 ```
 
-Fill in your values in `.env`. Required variables:
+Fill in your values in `.env`:
 
 ```
 DATABASE_URL=postgresql://user:password@localhost:5432/meraki
@@ -145,7 +172,7 @@ alembic upgrade head
 uvicorn app.main:app --reload
 ```
 
-### 7. Open the API docs
+### 7. Explore the API
 
 ```
 http://127.0.0.1:8000/docs
@@ -156,10 +183,12 @@ http://127.0.0.1:8000/docs
 ## API Endpoints
 
 ### Auth
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/auth/register` | Register a new user |
-| POST | `/auth/login` | Login and get JWT token |
+
+| Method | Endpoint | Auth required | Description |
+|--------|----------|----------------|-------------|
+| POST | `/auth/register` | No | Register a new user |
+| POST | `/auth/login` | No | Authenticate and receive a JWT |
+| GET | `/auth/me` | Yes | Get the authenticated user's profile |
 
 ---
 
@@ -168,7 +197,7 @@ http://127.0.0.1:8000/docs
 | Sprint | Focus |
 |--------|-------|
 | S1 | Project structure · Docker · PostgreSQL · database models · Alembic ✅ |
-| S2 | Auth: register · login · JWT middleware |
+| S2 | Auth: register · login · JWT middleware ✅ |
 | S3 | User profile: current stack · target role |
 | S4 | Infojobs connector · multi-connector architecture |
 | S5 | AI extraction with Gemini · offer text → structured JSON |
@@ -185,9 +214,9 @@ http://127.0.0.1:8000/docs
 - [x] PostgreSQL running via Docker Compose
 - [x] Database models designed and implemented (10 tables)
 - [x] Alembic migrations configured and applied
-- [x] User registration endpoint (`POST /auth/register`)
-- [ ] Login endpoint and JWT token generation
-- [ ] JWT middleware for protected routes
+- [x] User registration with hashed passwords
+- [x] Login with JWT token generation
+- [x] JWT middleware protecting routes (`get_current_user`)
 - [ ] User profile and stack definition
 - [ ] Infojobs connector
 - [ ] AI extraction with Gemini
